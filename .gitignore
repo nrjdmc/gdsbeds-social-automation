@@ -1,0 +1,5 @@
+dist/
+work/
+manifest.json
+*.log
+.DS_Store
