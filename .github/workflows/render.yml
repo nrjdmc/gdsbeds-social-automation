@@ -54,9 +54,36 @@ jobs:
         run: npm run render -- --manifest manifest.json --output dist
       - name: Convert previews to PNG
         run: node src/png.mjs dist
-      - name: Verify PNG outputs
+      - name: Enforce render quality gate
         shell: bash
-        run: test "$(find dist -maxdepth 1 -type f -name '*.png' | wc -l)" -ge 1
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs/promises';
+          import path from 'node:path';
+          import sharp from 'sharp';
+          const manifest = JSON.parse(await fs.readFile('manifest.json', 'utf8'));
+          const result = JSON.parse(await fs.readFile('dist/result.json', 'utf8'));
+          const pngs = (await fs.readdir('dist')).filter((name) => name.endsWith('.png')).sort();
+          const expected = manifest.format === 'carousel' ? manifest.slides.length : 1;
+          if (pngs.length !== expected) throw new Error(`Expected ${expected} PNG files, found ${pngs.length}.`);
+          for (const name of pngs) {
+            const meta = await sharp(path.join('dist', name)).metadata();
+            if (meta.width !== 1080 || meta.height !== 1080 || meta.format !== 'png') throw new Error(`${name} failed 1080x1080 PNG validation.`);
+          }
+          if (result.media_embedded !== true) throw new Error('Renderer did not embed all media.');
+          if (result.publication_ready !== false) throw new Error('publication_ready must remain false.');
+          if (manifest.format === 'carousel') {
+            const sources = manifest.slides.map((slide) => String(slide.fields?.['field.media'] || '').trim());
+            if (sources.some((value) => !value) || new Set(sources).size !== sources.length) throw new Error('Carousel media sources must be present and distinct.');
+            const required = ['asset_id','provider','photographer','source_page','license_name','license_url','verified_at','usage_scope'];
+            manifest.slides.forEach((slide, index) => {
+              for (const key of required) if (!String(slide.media_provenance?.[key] || '').trim()) throw new Error(`Slide ${index + 1} missing provenance field ${key}.`);
+            });
+          }
+          const report = {ok:true,checked_at:new Date().toISOString(),png_count:pngs.length,expected_png_count:expected,dimensions:'1080x1080',media_embedded:true,distinct_media:manifest.format === 'carousel',provenance_complete:manifest.format === 'carousel',publication_ready:false};
+          await fs.writeFile('dist/quality-report.json', JSON.stringify(report, null, 2) + '\n');
+          console.log(JSON.stringify(report));
+          NODE
       - name: Upload internal preview artifact
         uses: actions/upload-artifact@v4
         with:
