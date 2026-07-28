@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "brand": "GDS BEDS",
+  "post_code": "GDS-STATIC-DEMO-001",
+  "platform": "instagram",
+  "format": "single_image",
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "ratio": "4:5"
+  },
+  "topic": "Professional travel access",
+  "headline": "Hotels, transfers and experiences for travel professionals.",
+  "caption": "Internal deterministic preview."
+}
