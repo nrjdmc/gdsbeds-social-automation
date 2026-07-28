@@ -1,0 +1,57 @@
+name: GDSBEDS Social Render
+
+on:
+  workflow_dispatch:
+    inputs:
+      render_id:
+        description: Render job identifier
+        required: true
+        type: string
+      manifest_base64:
+        description: Base64-encoded render manifest JSON
+        required: true
+        type: string
+      dry_run:
+        description: Internal preview only
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gdsbeds-render-${{ inputs.render_id }}
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      RENDER_ID: ${{ inputs.render_id }}
+      MANIFEST_BASE64: ${{ inputs.manifest_base64 }}
+      DRY_RUN: ${{ inputs.dry_run }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Decode manifest
+        shell: bash
+        run: |
+          test "$DRY_RUN" = "true"
+          printf '%s' "$MANIFEST_BASE64" | base64 --decode > manifest.json
+      - name: Validate
+        run: npm run validate -- --manifest manifest.json
+      - name: Test
+        run: npm test
+      - name: Render internal preview
+        run: npm run render -- --manifest manifest.json --output dist
+      - name: Upload internal artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdsbeds-render-${{ inputs.render_id }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
