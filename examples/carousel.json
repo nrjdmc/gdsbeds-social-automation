@@ -1,0 +1,39 @@
+{
+  "version": "1.0",
+  "brand": "GDS BEDS",
+  "post_code": "GDS-CAROUSEL-DEMO-001",
+  "platform": "instagram",
+  "format": "carousel",
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "ratio": "4:5"
+  },
+  "slides": [
+    {
+      "role": "cover",
+      "headline": "Professional travel access",
+      "body": "Hotels, transfers and experiences in one workflow."
+    },
+    {
+      "role": "hotels",
+      "headline": "Hotels",
+      "body": "Accommodation supply for verified travel businesses."
+    },
+    {
+      "role": "transfers",
+      "headline": "Transfers",
+      "body": "Arrival and mobility coordinated around the journey."
+    },
+    {
+      "role": "experiences",
+      "headline": "Experiences",
+      "body": "Destination services beyond the hotel room."
+    },
+    {
+      "role": "cta",
+      "headline": "Built for travel professionals",
+      "body": "Publishing remains approval-gated."
+    }
+  ]
+}
