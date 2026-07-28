@@ -1,0 +1,51 @@
+{
+  "version": "1.0",
+  "brand": "GDS BEDS",
+  "post_code": "GDS-REEL-DEMO-001",
+  "platform": "instagram",
+  "format": "reel",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "ratio": "9:16",
+    "fps": 30,
+    "duration_seconds": 20
+  },
+  "scenes": [
+    {
+      "start": 0,
+      "end": 4,
+      "role": "hook",
+      "overlay": "Professional travel starts with access.",
+      "visual": "Destination arrival"
+    },
+    {
+      "start": 4,
+      "end": 8,
+      "role": "hotel",
+      "overlay": "Hotels",
+      "visual": "Hotel supply"
+    },
+    {
+      "start": 8,
+      "end": 12,
+      "role": "transfer",
+      "overlay": "Transfers",
+      "visual": "Airport transfer"
+    },
+    {
+      "start": 12,
+      "end": 16,
+      "role": "experience",
+      "overlay": "Experiences",
+      "visual": "Destination experience"
+    },
+    {
+      "start": 16,
+      "end": 20,
+      "role": "cta",
+      "overlay": "Built for verified travel businesses.",
+      "visual": "Partner collaboration"
+    }
+  ]
+}
