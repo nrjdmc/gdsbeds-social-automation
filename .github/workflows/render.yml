@@ -1,4 +1,5 @@
 name: GDSBEDS Social Render
+run-name: Render ${{ inputs.render_id }}
 
 on:
   workflow_dispatch:
@@ -37,18 +38,26 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Enforce dry-run boundary
+        shell: bash
+        run: test "$DRY_RUN" = "true"
+      - name: Install PNG renderer
+        run: npm install --no-save --no-audit --no-fund sharp@latest
       - name: Decode manifest
         shell: bash
-        run: |
-          test "$DRY_RUN" = "true"
-          printf '%s' "$MANIFEST_BASE64" | base64 --decode > manifest.json
-      - name: Validate
+        run: printf '%s' "$MANIFEST_BASE64" | base64 --decode > manifest.json
+      - name: Validate manifest
         run: npm run validate -- --manifest manifest.json
-      - name: Test
+      - name: Run contract tests
         run: npm test
-      - name: Render internal preview
+      - name: Render SVG source previews
         run: npm run render -- --manifest manifest.json --output dist
-      - name: Upload internal artifact
+      - name: Convert previews to PNG
+        run: node src/png.mjs dist
+      - name: Verify PNG outputs
+        shell: bash
+        run: test "$(find dist -maxdepth 1 -type f -name '*.png' | wc -l)" -ge 1
+      - name: Upload internal preview artifact
         uses: actions/upload-artifact@v4
         with:
           name: gdsbeds-render-${{ inputs.render_id }}
