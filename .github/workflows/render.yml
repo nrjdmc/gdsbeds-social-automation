@@ -40,7 +40,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp manifest.json dist/manifest.json
           FORMAT=$(node -p "JSON.parse(require('fs').readFileSync('manifest.json')).format")
           if [ "$FORMAT" = "reel" ]; then
             node -e "const fs=require('fs');const r=JSON.parse(fs.readFileSync('dist/result.json'));const p=fs.readdirSync('dist').filter(x=>x.endsWith('.png')).sort();fs.writeFileSync('dist/reel-scenes.tsv',p.map((x,i)=>x+'\t'+r.scene_durations[i]).join('\n')+'\n')"
@@ -55,7 +54,6 @@ jobs:
               printf "file '%s'\n" "$PART" >> dist/reel-parts.txt
             done < dist/reel-scenes.tsv
             (cd dist && ffmpeg -nostdin -y -f concat -safe 0 -i reel-parts.txt -c copy -an -movflags +faststart "$RENDER_ID.mp4")
-            rm -f dist/reel-part-*.mp4 dist/reel-parts.txt dist/reel-scenes.tsv
           fi
       - name: Enforce quality gate
         shell: bash
