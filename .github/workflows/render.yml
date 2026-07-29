@@ -41,28 +41,13 @@ jobs:
         run: |
           FORMAT=$(node -p "JSON.parse(require('fs').readFileSync('manifest.json')).format")
           if [ "$FORMAT" = "reel" ]; then
-            node --input-type=module <<'NODE'
-            import fs from 'node:fs/promises';
-            const r=JSON.parse(await fs.readFile('dist/result.json','utf8'));
-            const pngs=(await fs.readdir('dist')).filter(x=>x.endsWith('.png')).sort();
-            let text='';
-            pngs.forEach((p,i)=>{text+=`file '${p}'\nduration ${r.scene_durations[i]}\n`});
-            text+=`file '${pngs.at(-1)}'\n`;
-            await fs.writeFile('dist/reel-concat.txt',text);
-            NODE
+            node -e "const fs=require('fs');const r=JSON.parse(fs.readFileSync('dist/result.json'));const p=fs.readdirSync('dist').filter(x=>x.endsWith('.png')).sort();let t='';p.forEach((x,i)=>t+=\`file '\${x}'\\nduration \${r.scene_durations[i]}\\n\`);t+=\`file '\${p[p.length-1]}'\\n\`;fs.writeFileSync('dist/reel-concat.txt',t)"
             (cd dist && ffmpeg -y -f concat -safe 0 -i reel-concat.txt -vf "scale=1080:1920,format=yuv420p" -r 30 -an -c:v libx264 -movflags +faststart "$RENDER_ID.mp4")
           fi
       - name: Enforce quality gate
         shell: bash
         run: |
-          node --input-type=module <<'NODE'
-          import fs from 'node:fs/promises';import path from 'node:path';import sharp from 'sharp';import {execFileSync} from 'node:child_process';
-          const m=JSON.parse(await fs.readFile('manifest.json','utf8')),r=JSON.parse(await fs.readFile('dist/result.json','utf8')),files=await fs.readdir('dist');
-          if(r.publication_ready!==false||r.media_embedded!==true)throw new Error('Preview safety or media embedding failed.');
-          let report={ok:true,checked_at:new Date().toISOString(),format:m.format,publication_ready:false,media_embedded:true};
-          if(m.format==='reel'){const mp4=files.find(x=>x.endsWith('.mp4'));if(!mp4)throw new Error('Reel MP4 missing.');const p=JSON.parse(execFileSync('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=codec_name,width,height,pix_fmt','-show_entries','format=duration','-of','json',path.join('dist',mp4)],{encoding:'utf8'}));const s=p.streams[0],d=Number(p.format.duration);if(s.codec_name!=='h264'||s.width!==1080||s.height!==1920||s.pix_fmt!=='yuv420p'||d<1)throw new Error('Reel ffprobe validation failed.');report={...report,mp4,codec:s.codec_name,width:s.width,height:s.height,pixel_format:s.pix_fmt,duration_seconds:d,audio_present:false};}else{const pngs=files.filter(x=>x.endsWith('.png'));const expected=m.format==='carousel'?m.slides.length:1;if(pngs.length!==expected)throw new Error('PNG count mismatch.');for(const n of pngs){const x=await sharp(path.join('dist',n)).metadata();if(x.width!==1080||x.height!==1080)throw new Error('PNG dimensions invalid.')}report={...report,png_count:pngs.length,dimensions:'1080x1080'};}
-          await fs.writeFile('dist/quality-report.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
-          NODE
+          node -e "const fs=require('fs'),path=require('path'),cp=require('child_process'),sharp=require('sharp');(async()=>{const m=JSON.parse(fs.readFileSync('manifest.json')),r=JSON.parse(fs.readFileSync('dist/result.json')),files=fs.readdirSync('dist');if(r.publication_ready!==false||r.media_embedded!==true)throw Error('Preview safety or media embedding failed.');let q={ok:true,checked_at:new Date().toISOString(),format:m.format,publication_ready:false,media_embedded:true};if(m.format==='reel'){const mp4=files.find(x=>x.endsWith('.mp4'));if(!mp4)throw Error('Reel MP4 missing.');const p=JSON.parse(cp.execFileSync('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=codec_name,width,height,pix_fmt','-show_entries','format=duration','-of','json',path.join('dist',mp4)],{encoding:'utf8'}));const s=p.streams[0],d=Number(p.format.duration);if(s.codec_name!=='h264'||s.width!==1080||s.height!==1920||s.pix_fmt!=='yuv420p'||d<1)throw Error('Reel ffprobe validation failed.');q={...q,mp4,codec:s.codec_name,width:s.width,height:s.height,pixel_format:s.pix_fmt,duration_seconds:d,audio_present:false};}else{const pngs=files.filter(x=>x.endsWith('.png')),expected=m.format==='carousel'?m.slides.length:1;if(pngs.length!==expected)throw Error('PNG count mismatch.');for(const n of pngs){const x=await sharp(path.join('dist',n)).metadata();if(x.width!==1080||x.height!==1080)throw Error('PNG dimensions invalid.')}q={...q,png_count:pngs.length,dimensions:'1080x1080'};}fs.writeFileSync('dist/quality-report.json',JSON.stringify(q,null,2)+'\\n');console.log(JSON.stringify(q));})()"
       - uses: actions/upload-artifact@v4
         with:
           name: gdsbeds-render-${{ inputs.render_id }}
