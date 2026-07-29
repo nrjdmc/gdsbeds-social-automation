@@ -40,6 +40,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          cp manifest.json dist/manifest.json
           FORMAT=$(node -p "JSON.parse(require('fs').readFileSync('manifest.json')).format")
           if [ "$FORMAT" = "reel" ]; then
             node -e "const fs=require('fs');const r=JSON.parse(fs.readFileSync('dist/result.json'));const p=fs.readdirSync('dist').filter(x=>x.endsWith('.png')).sort();fs.writeFileSync('dist/reel-scenes.tsv',p.map((x,i)=>x+'\t'+r.scene_durations[i]).join('\n')+'\n')"
@@ -50,10 +51,11 @@ jobs:
               FRAMES=$(node -p "Math.round(Number(process.argv[1])*30)" "$DURATION")
               FADE_OUT=$(node -p "Math.max(0,Number(process.argv[1])-0.35)" "$DURATION")
               PART=$(printf 'reel-part-%02d.mp4' "$INDEX")
-              ffmpeg -y -loop 1 -i "dist/$PNG" -vf "scale=1200:2134:force_original_aspect_ratio=increase,crop=1200:2134,zoompan=z='min(zoom+0.00045,1.08)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${FRAMES}:s=1080x1920:fps=30,fade=t=in:st=0:d=0.35,fade=t=out:st=${FADE_OUT}:d=0.35,format=yuv420p" -t "$DURATION" -an -c:v libx264 -preset medium -crf 20 -movflags +faststart "dist/$PART"
+              ffmpeg -nostdin -y -loop 1 -i "dist/$PNG" -vf "scale=1200:2134:force_original_aspect_ratio=increase,crop=1200:2134,zoompan=z='min(zoom+0.00045,1.08)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${FRAMES}:s=1080x1920:fps=30,fade=t=in:st=0:d=0.35,fade=t=out:st=${FADE_OUT}:d=0.35,format=yuv420p" -t "$DURATION" -an -c:v libx264 -preset medium -crf 20 -movflags +faststart "dist/$PART"
               printf "file '%s'\n" "$PART" >> dist/reel-parts.txt
             done < dist/reel-scenes.tsv
-            (cd dist && ffmpeg -y -f concat -safe 0 -i reel-parts.txt -c copy -an -movflags +faststart "$RENDER_ID.mp4")
+            (cd dist && ffmpeg -nostdin -y -f concat -safe 0 -i reel-parts.txt -c copy -an -movflags +faststart "$RENDER_ID.mp4")
+            rm -f dist/reel-part-*.mp4 dist/reel-parts.txt dist/reel-scenes.tsv
           fi
       - name: Enforce quality gate
         shell: bash
